@@ -2,26 +2,23 @@
 
 ## Pre-reqs
 
-Requires node 6.
-Install nvm https://github.com/creationix/nvm
-
-Install node 6
-`nvm install 6`
+* Install nvm https://github.com/creationix/nvm
+* `nvm install 6`
 
 ## Server
 
 Simple package install, then start to launch the server.
 Defaults to port 1337.
 
-`cd server`
-`npm install`
-`npm start`
+* `cd server`
+* `npm install`
+* `npm start`
 
 ## Client
 
-`cd client`
-`npm install`
-`npm start <name> <channel>`
+* `cd client`
+* `npm install`
+* `npm start <name> <channel>`
 
 # Test Procedure
 
@@ -34,9 +31,7 @@ Defaults to port 1337.
 
 # dev notes
 had to do a weird bootstrapping process to get sails to work without
-creating a custom docker image (sails prefers a global install)
-
-chose not to setup git due to short nature of project.
+creating a custom docker image (sails prefers a global install).
 
 opted to test first w/ sails socket io - it provides
 some extra magic that vanilla socket io does not,
