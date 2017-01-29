@@ -1,0 +1,15 @@
+client:
+  image: node
+  volumes:
+    - ./client:/usr/src/app/
+  command: bash
+  working_dir: /usr/src/app/
+
+server:
+  image: node
+  expose:
+    - "1337"
+  volumes:
+    - ./server:/usr/src/app/
+  command: bash
+  working_dir: /usr/src/app/
