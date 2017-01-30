@@ -1,9 +1,10 @@
 var io = require('sails.io.js')( require('socket.io-client') ),
-    Client = require('node-rest-client').Client,
-    client = new Client(),
     assert = require('assert'),
     readline = require('readline'),
     suspend = require('suspend'),
+
+    Helpers = require('./helpers.js'),
+    helpers = new Helpers(),
 
     args = process.argv.slice(2),
 
@@ -14,6 +15,7 @@ var io = require('sails.io.js')( require('socket.io-client') ),
     ;
 
 io.sails.url = "http://localhost:1337/";
+helpers.url  = "http://localhost:1337/";
 
 assert(userName, 'user name required');
 assert(channelName, 'channel name required');
@@ -25,9 +27,8 @@ var printMessage = function(message) {
 var messageHandler = suspend.fn(function *(data) {
   if (data.verb === 'addedTo' && data.attribute === 'messages') {
     // todo: not happy about the extra GET required here
-    var url = "http://localhost:1337/message/" + data.addedId;
-    var rawMessage = yield client.get(url, suspend.resumeRaw());
-    var message = rawMessage[0];
+    var message = yield helpers.get('message/' + String(data.addedId), suspend.resume());
+
     // quick hack to avoid talking to yourself,
     // but assumes unique userName. full user model w/ ID check
     // would also get around this - or altering socket room paradigm
@@ -38,20 +39,17 @@ var messageHandler = suspend.fn(function *(data) {
 });
 
 var postMessage = suspend.fn(function *(input) {
-  var url = "http://localhost:1337/message/";
-  var postargs = { data: {
+  var body = {
     'channel': channel.id,
     'content': input,
     'poster': userName
-  }};
-  yield client.post(url, postargs, suspend.resumeRaw());
+  };
+  helpers.post('message', body, function() {}); // no need to yield and wait.
 });
 
 var loadMessages = suspend.fn(function *() {
-  // get most recent messages
-  var url = "http://localhost:1337/message?channel=" + String(channel.id) + "&limit=30&sort=createdAt%20DESC";
-  var data = yield client.get(url, suspend.resumeRaw());
-  var messages = data[0];
+  var url = "message?channel=" + String(channel.id) + "&limit=30&sort=createdAt%20DESC";
+  var messages = yield helpers.get(url, suspend.resume());
 
   messages.reverse();
   for (i=0; i<messages.length; i++) {
@@ -63,23 +61,15 @@ io.socket.on('channel', messageHandler);
 
 var main = suspend.fn(function *() {
   // todo: this won't handle bad url chars very well
-  var url = "http://localhost:1337/channel?name=" + String(channelName);
+  var url = "channel?name=" + String(channelName);
+  var existingChannels = yield helpers.get(url, suspend.resume());
 
-  // this lib doesn't follows node callback scheme, and
-  // returns data instead of err, data. use resumeRaw
-  var data = yield client.get(url, suspend.resumeRaw());
-  existingChannels = data[0];
-
-  if (existingChannels > 1) {
+  if (existingChannels.length > 1) {
     throw new Error("Multiple channel names");
   }
 
   if (existingChannels.length < 1) {
-    console.log('creating channel:', channelName);
-    var url = "http://localhost:1337/channel";
-    var postargs = { data: {'name': channelName} };
-    var data = yield client.post(url, postargs, suspend.resumeRaw());
-    channel = data[0];
+    channel = yield helpers.post('channel', {'name': channelName}, suspend.resume());
   } else {
     channel = existingChannels[0];
   }
