@@ -25,7 +25,7 @@ var printMessage = function(message) {
 };
 
 var messageHandler = suspend.fn(function *(data) {
-  if (data.verb === 'addedTo' && data.attribute === 'messages') {
+  if (data.id === channel.id && data.verb === 'addedTo' && data.attribute === 'messages') {
     // todo: not happy about the extra GET required here
     var message = yield helpers.get('message/' + String(data.addedId), suspend.resume());
 
@@ -40,7 +40,9 @@ var messageHandler = suspend.fn(function *(data) {
 
 var handleInput = suspend.fn(function *(input) {
   if (input[0] === '/') { // escape sequences
-    switch (input) {
+    var split = input.split(' ');
+
+    switch (split[0]) {
       case '/channels':
         var channels = yield helpers.get('channel', suspend.resume());
         console.log('Available Channels:');
@@ -48,11 +50,23 @@ var handleInput = suspend.fn(function *(input) {
           console.log(' ', channels[i].name);
         }
         break;
+      case '/join':
+        if (split.length !== 2) {
+          console.log('/join requires exactly ONE argument')
+          return;
+        }
+
+        var newChannel = split[1];
+        channel = yield subscribeToChannel(newChannel, suspend.resume());
+        yield loadMessages(suspend.resume());
+
+        break;
       case '/help':
       default:
         console.log('Commands:');
         console.log('/help - display this message');
         console.log('/channels - display available channels');
+        console.log('/join <channel> - join this new channel');
     }
   } else {
     var body = {
@@ -64,19 +78,19 @@ var handleInput = suspend.fn(function *(input) {
   }
 });
 
-var loadMessages = suspend.fn(function *() {
-  var url = "message?channel=" + String(channel.id) + "&limit=30&sort=createdAt%20DESC";
+var loadMessages = suspend.callback(function *() {
+  var url = "message?channel=" + String(channel.id) + "&limit=10&sort=createdAt%20DESC";
   var messages = yield helpers.get(url, suspend.resume());
 
   messages.reverse();
   for (i=0; i<messages.length; i++) {
     printMessage(messages[i]);
   }
+
+  return;
 });
 
-io.socket.on('channel', messageHandler);
-
-var main = suspend.fn(function *() {
+var subscribeToChannel = suspend.callback(function *(channelName) {
   // todo: this won't handle bad url chars very well
   var url = "channel?name=" + String(channelName);
   var existingChannels = yield helpers.get(url, suspend.resume());
@@ -85,6 +99,7 @@ var main = suspend.fn(function *() {
     throw new Error("Multiple channel names");
   }
 
+  var channel;
   if (existingChannels.length < 1) {
     channel = yield helpers.post('channel', {'name': channelName}, suspend.resume());
   } else {
@@ -93,9 +108,19 @@ var main = suspend.fn(function *() {
 
   // subscribe to specific channel id
   yield io.socket.get('/channel/' + channel.id, suspend.resumeRaw());
-  console.log('subscribed to:', channelName, channel.id);
+  console.log('*** Subscribed to:', channelName);
 
-  loadMessages();
+  return channel;
+})
+
+
+io.socket.on('channel', messageHandler);
+
+var main = suspend.fn(function *() {
+  // these could be parallelized
+  channel = yield subscribeToChannel(channelName, suspend.resume());
+
+  yield loadMessages(suspend.resume());
 
   // begin the chat loop
   rl = readline.createInterface({
