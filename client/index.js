@@ -38,13 +38,30 @@ var messageHandler = suspend.fn(function *(data) {
   }
 });
 
-var postMessage = suspend.fn(function *(input) {
-  var body = {
-    'channel': channel.id,
-    'content': input,
-    'poster': userName
-  };
-  helpers.post('message', body, function() {}); // no need to yield and wait.
+var handleInput = suspend.fn(function *(input) {
+  if (input[0] === '/') { // escape sequences
+    switch (input) {
+      case '/channels':
+        var channels = yield helpers.get('channel', suspend.resume());
+        console.log('Available Channels:');
+        for (var i=0; i<channels.length; i++) {
+          console.log(' ', channels[i].name);
+        }
+        break;
+      case '/help':
+      default:
+        console.log('Commands:');
+        console.log('/help - display this message');
+        console.log('/channels - display available channels');
+    }
+  } else {
+    var body = {
+      'channel': channel.id,
+      'content': input,
+      'poster': userName
+    };
+    helpers.post('message', body, function() {}); // no need to yield and wait.
+  }
 });
 
 var loadMessages = suspend.fn(function *() {
@@ -86,7 +103,7 @@ var main = suspend.fn(function *() {
     output: process.stdout
   });
 
-  rl.on('line', postMessage);
+  rl.on('line', handleInput);
 
 });
 
