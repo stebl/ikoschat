@@ -9,10 +9,14 @@ var io = require('sails.io.js')( require('socket.io-client') ),
     args = process.argv.slice(2),
 
     userName = args[0],
-    channelName = args[1],
+    channelName = 'general',
     channel,
     createChannel = false
     ;
+
+if (args.length > 1) {
+  channelName = args[1];
+}
 
 io.sails.url = "http://localhost:1337/";
 helpers.url  = "http://localhost:1337/";

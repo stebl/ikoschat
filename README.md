@@ -18,7 +18,19 @@ Defaults to port 1337.
 
 * `cd client`
 * `npm install`
-* `npm start <name> <channel>`
+* `npm start <username> [channel]`
+
+## client usage
+
+* `npm start <username> [channel]`
+* `<username>` - required username
+* `[channel]` - optional channel to join, defaults to 'general'. will be created if it does not exist.
+
+After starting the client,
+
+* `/help` - display in-chat help
+* `/channels` - display all existing channels
+* `/join <channel>` - will join a new channel.  will be created if it does not exist.
 
 # Test Procedure
 
@@ -28,14 +40,17 @@ Defaults to port 1337.
 * Open a new terminal and launch another client with the same room
   ex. `npm start steveblass random`
 * chat between the two clients
+* use `/channels` to list other channels
+* use `/join <channel>` switch channels
 
 # dev notes
-had to do a weird bootstrapping process to get sails to work without
-creating a custom docker image (sails prefers a global install).
-
 opted to test first w/ sails socket io - it provides
 some extra magic that vanilla socket io does not,
 this necessitated a language switch
+
+
+opted to drop docker due to networking issues.  npm portability should be
+sufficient
 
 # TODO
 * TESTS
